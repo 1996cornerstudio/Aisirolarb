@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, RefreshCw, Upload, X } from "lucide-react";
+import { Camera, RefreshCw, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
 interface Props {
@@ -13,8 +13,8 @@ interface Props {
 }
 
 /**
- * Camera-preview modal that captures a still frame from the device camera.
- * Falls back to a plain file uploader when camera access is unavailable.
+ * Camera-only modal for check-in/out. A still frame is captured from the
+ * device camera; gallery / file upload is not offered.
  */
 export default function CameraCapture({
   title,
@@ -39,6 +39,7 @@ export default function CameraCapture({
 
   const startCamera = useCallback(async () => {
     setCameraError(false);
+    setCameraReady(false);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user" },
@@ -84,13 +85,6 @@ export default function CameraCapture({
     );
   }
 
-  function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setPreview({ url: URL.createObjectURL(file), file });
-    stopCamera();
-  }
-
   function retake() {
     setPreview(null);
     startCamera();
@@ -128,21 +122,17 @@ export default function CameraCapture({
                 className="h-full w-full object-cover"
               />
             ) : cameraError ? (
-              <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-slate-300">
+              <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center text-slate-300">
                 <Camera size={32} className="opacity-60" />
                 <p className="text-sm">{t.camera.unavailable}</p>
-                <label className="cursor-pointer rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">
-                  <span className="inline-flex items-center gap-2">
-                    <Upload size={15} /> {t.camera.chooseFile}
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="user"
-                    className="hidden"
-                    onChange={onPickFile}
-                  />
-                </label>
+                <button
+                  type="button"
+                  onClick={startCamera}
+                  className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20"
+                >
+                  <RefreshCw size={15} />
+                  {t.camera.retry}
+                </button>
               </div>
             ) : (
               <>
@@ -191,18 +181,6 @@ export default function CameraCapture({
               )
             )}
           </div>
-
-          {!preview && !cameraError && (
-            <label className="mt-3 block cursor-pointer text-center text-xs font-medium text-slate-400 transition hover:text-slate-600">
-              {t.camera.orUpload}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={onPickFile}
-              />
-            </label>
-          )}
         </div>
       </div>
     </div>

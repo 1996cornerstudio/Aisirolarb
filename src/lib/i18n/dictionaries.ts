@@ -97,14 +97,13 @@ const en = {
   camera: {
     titleIn: "Check-In",
     titleOut: "Check-Out",
-    unavailable: "Camera unavailable. Upload a photo instead.",
-    chooseFile: "Choose file",
+    unavailable: "Camera unavailable. Allow camera access in your browser settings, then try again.",
     starting: "Starting camera…",
     takePhoto: "Take photo",
     retake: "Retake",
+    retry: "Try again",
     confirm: "Confirm",
     saving: "Saving…",
-    orUpload: "or upload from device",
   },
   admin: {
     title: "Admin Dashboard",
@@ -303,14 +302,13 @@ const th: Dictionary = {
   camera: {
     titleIn: "บันทึกเวลาเข้างาน",
     titleOut: "บันทึกเวลาออกงาน",
-    unavailable: "ใช้กล้องไม่ได้ กรุณาอัปโหลดรูปแทน",
-    chooseFile: "เลือกไฟล์",
+    unavailable: "ใช้กล้องไม่ได้ กรุณาอนุญาตการใช้กล้องในเบราว์เซอร์ แล้วลองใหม่",
     starting: "กำลังเปิดกล้อง…",
     takePhoto: "ถ่ายรูป",
     retake: "ถ่ายใหม่",
+    retry: "ลองอีกครั้ง",
     confirm: "ยืนยัน",
     saving: "กำลังบันทึก…",
-    orUpload: "หรืออัปโหลดจากเครื่อง",
   },
   admin: {
     title: "แดชบอร์ดผู้ดูแล",
@@ -507,14 +505,14 @@ const my: Dictionary = {
   camera: {
     titleIn: "အလုပ်တက်ချိန်မှတ်ရန်",
     titleOut: "အလုပ်ဆင်းချိန်မှတ်ရန်",
-    unavailable: "ကင်မရာအသုံးမပြုနိုင်ပါ။ ဓာတ်ပုံတင်ပါ။",
-    chooseFile: "ဖိုင်ရွေးပါ",
+    unavailable:
+      "ကင်မရာအသုံးမပြုနိုင်ပါ။ ဘရောက်ဆာတွင် ကင်မရာ ခွင့်ပြုချက်ပေးပြီး ထပ်စမ်းကြည့်ပါ။",
     starting: "ကင်မရာ စတင်နေသည်…",
     takePhoto: "ဓာတ်ပုံရိုက်ရန်",
     retake: "ပြန်ရိုက်ရန်",
+    retry: "ထပ်စမ်းရန်",
     confirm: "အတည်ပြုမည်",
     saving: "သိမ်းနေသည်…",
-    orUpload: "သို့မဟုတ် စက်ပစ္စည်းမှ တင်ပါ",
   },
   admin: {
     title: "Admin Dashboard",

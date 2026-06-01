@@ -168,6 +168,8 @@ function useResultMessage() {
         ? t.settings.errRequired
         : res.code === "passwordShort"
         ? t.settings.errPasswordShort
+        : res.code === "usernameInvalid"
+        ? t.settings.errUsernameInvalid
         : res.code === "forbidden"
         ? t.settings.errForbidden
         : res.code === "noServiceKey"
@@ -255,12 +257,13 @@ function UsersTab({
             <input name="name" required className={inputClass} />
           </div>
           <div>
-            <label className={labelClass}>{t.common.email}</label>
+            <label className={labelClass}>{t.common.username}</label>
             <input
-              name="email"
-              type="email"
+              name="username"
+              type="text"
               required
-              placeholder={t.common.emailPlaceholder}
+              autoCapitalize="none"
+              placeholder={t.common.usernamePlaceholder}
               className={inputClass}
             />
           </div>
@@ -334,6 +337,7 @@ function UsersTab({
                     )}
                   </div>
                   <p className="truncate text-xs text-slate-400">
+                    {e.username ? `@${e.username} · ` : ""}
                     {e.branch ?? t.common.noBranch}
                   </p>
                 </div>

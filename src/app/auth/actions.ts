@@ -4,6 +4,11 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { LOCALE_COOKIE, isLocale } from "@/lib/i18n/config";
+import {
+  identifierToEmail,
+  isValidUsername,
+  normalizeUsername,
+} from "@/lib/username";
 
 export interface AuthResult {
   /** Raw error text from Supabase (already localized-agnostic). */
@@ -14,23 +19,30 @@ export interface AuthResult {
     | "loginRequired"
     | "signupRequired"
     | "passwordShort"
+    | "usernameInvalid"
     | "confirmEmail";
 }
 
-/** Email + password sign-in. On success, redirects to the role dispatcher. */
+/**
+ * Username (or email) + password sign-in. The username is mapped to a synthetic
+ * email under the hood. On success, redirects to the role dispatcher.
+ */
 export async function signInAction(
   _prev: AuthResult,
   formData: FormData
 ): Promise<AuthResult> {
-  const email = String(formData.get("email") ?? "").trim();
+  const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
-  if (!email || !password) {
+  if (!username || !password) {
     return { code: "loginRequired" };
   }
 
   const supabase = createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { error } = await supabase.auth.signInWithPassword({
+    email: identifierToEmail(username),
+    password,
+  });
 
   if (error) return { error: error.message };
 
@@ -46,14 +58,17 @@ export async function signUpAction(
   _prev: AuthResult,
   formData: FormData
 ): Promise<AuthResult> {
-  const email = String(formData.get("email") ?? "").trim();
+  const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const name = String(formData.get("name") ?? "").trim();
   const branch = String(formData.get("branch") ?? "").trim();
   const adminCode = String(formData.get("adminCode") ?? "").trim();
 
-  if (!email || !password || !name) {
+  if (!username || !password || !name) {
     return { code: "signupRequired" };
+  }
+  if (!isValidUsername(username)) {
+    return { code: "usernameInvalid" };
   }
   if (password.length < 6) {
     return { code: "passwordShort" };
@@ -63,11 +78,12 @@ export async function signUpAction(
 
   const supabase = createClient();
   const { data, error } = await supabase.auth.signUp({
-    email,
+    email: identifierToEmail(username),
     password,
     options: {
       data: {
         name,
+        username: normalizeUsername(username),
         branch,
         admin_code: adminCode,
         lang: isLocale(lang) ? lang : "th",

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isLocale } from "@/lib/i18n/config";
+import { identifierToEmail, isValidUsername, normalizeUsername } from "@/lib/username";
 
 export interface ActionResult {
   ok?: boolean;
@@ -17,6 +18,7 @@ export interface ActionResult {
     | "branchRemoved"
     | "required"
     | "passwordShort"
+    | "usernameInvalid"
     | "forbidden"
     | "noServiceKey"
     | "error";
@@ -66,14 +68,15 @@ export async function createUserAction(
 ): Promise<ActionResult> {
   if (!(await requireAdmin())) return { code: "forbidden" };
 
-  const email = String(formData.get("email") ?? "").trim();
+  const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const name = String(formData.get("name") ?? "").trim();
   const branch = String(formData.get("branch") ?? "").trim();
   const role = String(formData.get("role") ?? "employee") === "admin" ? "admin" : "employee";
   const lang = String(formData.get("language") ?? "th");
 
-  if (!email || !password || !name) return { code: "required" };
+  if (!username || !password || !name) return { code: "required" };
+  if (!isValidUsername(username)) return { code: "usernameInvalid" };
   if (password.length < 6) return { code: "passwordShort" };
 
   let admin;
@@ -84,11 +87,12 @@ export async function createUserAction(
   }
 
   const { data, error } = await admin.auth.admin.createUser({
-    email,
+    email: identifierToEmail(username),
     password,
     email_confirm: true,
     user_metadata: {
       name,
+      username: normalizeUsername(username),
       branch,
       lang: isLocale(lang) ? lang : "th",
     },
@@ -101,7 +105,7 @@ export async function createUserAction(
   if (data.user) {
     await admin
       .from("profiles")
-      .update({ role, branch: branch || null, name })
+      .update({ role, branch: branch || null, name, username: normalizeUsername(username) })
       .eq("id", data.user.id);
   }
 

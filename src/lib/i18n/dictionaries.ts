@@ -14,6 +14,8 @@ const en = {
     clear: "Clear",
     hoursShort: "h",
     emailPlaceholder: "you@company.com",
+    username: "Username",
+    usernamePlaceholder: "e.g. john",
     language: "Language",
     settings: "Settings",
     save: "Save",
@@ -49,6 +51,7 @@ const en = {
     haveAccount: "Already have an account?",
     fullName: "Full name",
     fullNamePlaceholder: "Jane Doe",
+    usernameHint: "Letters, numbers, . _ - (at least 3 characters). No email needed.",
     passwordPlaceholder: "At least 6 characters",
     adminCode: "Admin code",
     optional: "(optional)",
@@ -56,7 +59,9 @@ const en = {
     adminCodePlaceholder: "Leave blank to join as employee",
     create: "Create account",
     creating: "Creating account…",
-    errorRequired: "Name, email and password are required.",
+    errorRequired: "Name, username and password are required.",
+    errorUsernameInvalid:
+      "Username must be 3+ characters: lowercase letters, numbers, . _ -",
     errorPasswordShort: "Password must be at least 6 characters.",
     successConfirm:
       "Account created! Check your email to confirm your address, then sign in.",
@@ -190,6 +195,7 @@ const en = {
     msgBranchAdded: "Branch added.",
     errRequired: "Please fill in all required fields.",
     errPasswordShort: "Password must be at least 6 characters.",
+    errUsernameInvalid: "Invalid username (3+ chars: a-z, 0-9, . _ -).",
     errForbidden: "You don't have permission to do that.",
     errNoServiceKey:
       "Creating users needs the SUPABASE_SERVICE_ROLE_KEY env var. See the setup note.",
@@ -214,6 +220,8 @@ const th: Dictionary = {
     clear: "ล้าง",
     hoursShort: "ชม.",
     emailPlaceholder: "you@company.com",
+    username: "ชื่อผู้ใช้",
+    usernamePlaceholder: "เช่น john",
     language: "ภาษา",
     settings: "ตั้งค่า",
     save: "บันทึก",
@@ -249,6 +257,7 @@ const th: Dictionary = {
     haveAccount: "มีบัญชีอยู่แล้ว?",
     fullName: "ชื่อ-นามสกุล",
     fullNamePlaceholder: "เช่น สมชาย ใจดี",
+    usernameHint: "ตัวอักษร ตัวเลข . _ - (อย่างน้อย 3 ตัว) ไม่ต้องใช้อีเมล",
     passwordPlaceholder: "อย่างน้อย 6 ตัวอักษร",
     adminCode: "รหัสแอดมิน",
     optional: "(ไม่บังคับ)",
@@ -256,7 +265,9 @@ const th: Dictionary = {
     adminCodePlaceholder: "เว้นว่างไว้เพื่อสมัครเป็นพนักงาน",
     create: "สร้างบัญชี",
     creating: "กำลังสร้างบัญชี…",
-    errorRequired: "ต้องกรอกชื่อ อีเมล และรหัสผ่าน",
+    errorRequired: "ต้องกรอกชื่อ ชื่อผู้ใช้ และรหัสผ่าน",
+    errorUsernameInvalid:
+      "ชื่อผู้ใช้ต้องมีอย่างน้อย 3 ตัว: a-z, 0-9, . _ -",
     errorPasswordShort: "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร",
     successConfirm:
       "สร้างบัญชีแล้ว! กรุณาตรวจสอบอีเมลเพื่อยืนยัน แล้วจึงเข้าสู่ระบบ",
@@ -390,6 +401,7 @@ const th: Dictionary = {
     msgBranchAdded: "เพิ่มสาขาแล้ว",
     errRequired: "กรุณากรอกข้อมูลที่จำเป็นให้ครบ",
     errPasswordShort: "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร",
+    errUsernameInvalid: "ชื่อผู้ใช้ไม่ถูกต้อง (อย่างน้อย 3 ตัว: a-z, 0-9, . _ -)",
     errForbidden: "คุณไม่มีสิทธิ์ทำรายการนี้",
     errNoServiceKey:
       "การสร้างผู้ใช้ต้องตั้งค่า SUPABASE_SERVICE_ROLE_KEY ดูคำแนะนำการตั้งค่า",
@@ -412,6 +424,8 @@ const my: Dictionary = {
     clear: "ရှင်းမည်",
     hoursShort: "နာရီ",
     emailPlaceholder: "you@company.com",
+    username: "အသုံးပြုသူအမည်",
+    usernamePlaceholder: "ဥပမာ john",
     language: "ဘာသာစကား",
     settings: "ဆက်တင်",
     save: "သိမ်းမည်",
@@ -447,6 +461,7 @@ const my: Dictionary = {
     haveAccount: "အကောင့်ရှိပြီးသားလား?",
     fullName: "အမည်အပြည့်အစုံ",
     fullNamePlaceholder: "Jane Doe",
+    usernameHint: "စာလုံး၊ ဂဏန်း၊ . _ - (အနည်းဆုံး ၃ လုံး)။ အီးမေးလ် မလိုပါ။",
     passwordPlaceholder: "အနည်းဆုံး ၆ လုံး",
     adminCode: "Admin ကုဒ်",
     optional: "(ရွေးချယ်နိုင်)",
@@ -454,7 +469,9 @@ const my: Dictionary = {
     adminCodePlaceholder: "ဝန်ထမ်းအဖြစ် ဆက်လက်ရန် ကွက်လပ်ထားပါ",
     create: "အကောင့်ဖွင့်မည်",
     creating: "ဖွင့်နေသည်…",
-    errorRequired: "အမည်၊ အီးမေးလ်နှင့် စကားဝှက် လိုအပ်သည်။",
+    errorRequired: "အမည်၊ အသုံးပြုသူအမည်နှင့် စကားဝှက် လိုအပ်သည်။",
+    errorUsernameInvalid:
+      "အသုံးပြုသူအမည် မမှန်ပါ (အနည်းဆုံး ၃ လုံး: a-z, 0-9, . _ -)။",
     errorPasswordShort: "စကားဝှက်သည် အနည်းဆုံး ၆ လုံး ရှိရမည်။",
     successConfirm:
       "အကောင့်ဖွင့်ပြီးပါပြီ! အီးမေးလ်တွင် အတည်ပြုပြီး ဝင်ရောက်ပါ။",
@@ -588,6 +605,7 @@ const my: Dictionary = {
     msgBranchAdded: "ဌာနခွဲ ထည့်ပြီးပါပြီ။",
     errRequired: "လိုအပ်သော အကွက်များ ဖြည့်ပါ။",
     errPasswordShort: "စကားဝှက်သည် အနည်းဆုံး ၆ လုံး ရှိရမည်။",
+    errUsernameInvalid: "အသုံးပြုသူအမည် မမှန်ပါ (၃ လုံး: a-z, 0-9, . _ -)။",
     errForbidden: "ဤလုပ်ဆောင်ချက်အတွက် ခွင့်ပြုချက်မရှိပါ။",
     errNoServiceKey:
       "အသုံးပြုသူ ဖန်တီးရန် SUPABASE_SERVICE_ROLE_KEY လိုအပ်သည်။ ဆက်တင်မှတ်စုကြည့်ပါ။",

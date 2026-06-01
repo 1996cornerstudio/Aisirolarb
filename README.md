@@ -31,8 +31,9 @@ Run these scripts in order in your Supabase project → **SQL Editor** → **New
 
 ### Auth configuration
 
+- **Username login (no email):** users sign up and sign in with a **username** + password. Under the hood the username is mapped to a synthetic email `<username>@attendance.local` (`src/lib/username.ts`) so Supabase's email auth keeps working. Inputs containing `@` are treated as a real email, so older email accounts still work.
 - **Admin code:** the secret lives in `handle_new_user()` inside `auth.sql` (default `ADMIN123`). Anyone who enters it at signup becomes an `admin`; everyone else is an `employee`. The role is decided in the database, never trusted from the browser.
-- **Email confirmation:** for a frictionless local demo, disable it under **Authentication → Providers → Email → Confirm email**. Otherwise new users must confirm via email before they can sign in.
+- **Email confirmation:** because usernames use a non-deliverable synthetic email, you must **disable** confirmation under **Authentication → Providers → Email → Confirm email**. (Admin-created users in the Settings page are auto-confirmed regardless.)
 
 ## 2. Environment variables
 

@@ -3,6 +3,7 @@ export type Role = "employee" | "admin";
 export interface Profile {
   id: string;
   name: string;
+  username: string | null;
   branch: string | null;
   role: Role;
   language: "en" | "th" | "my";

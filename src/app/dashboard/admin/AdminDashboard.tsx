@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Building2,
+  CalendarDays,
+  ChevronDown,
   Pencil,
   Search,
   Settings as SettingsIcon,
@@ -201,33 +203,54 @@ export default function AdminDashboard({
             </h2>
 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 shadow-sm focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-100">
+              {/* Search */}
+              <div className="flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 shadow-sm transition focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-100">
                 <Search size={15} className="text-slate-400" />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder={t.admin.searchPlaceholder}
-                  className="w-44 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                  className="w-40 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
                 />
               </div>
-              <select
-                value={branch}
-                onChange={(e) => setBranch(e.target.value)}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-              >
-                <option value="">{t.admin.allBranches}</option>
-                {branches.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-              />
+
+              {/* Branch — styled like the language switcher */}
+              <div className="relative inline-flex items-center">
+                <Building2
+                  size={15}
+                  className="pointer-events-none absolute left-2.5 text-slate-400"
+                />
+                <select
+                  value={branch}
+                  onChange={(e) => setBranch(e.target.value)}
+                  className="h-10 cursor-pointer appearance-none rounded-lg border border-slate-300 bg-white pl-8 pr-8 text-sm font-medium text-slate-700 shadow-sm outline-none transition hover:bg-slate-50 focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                >
+                  <option value="">{t.admin.allBranches}</option>
+                  {branches.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={14}
+                  className="pointer-events-none absolute right-2.5 text-slate-400"
+                />
+              </div>
+
+              {/* Date — calendar icon + whole-field click to open the picker */}
+              <div className="relative inline-flex items-center">
+                <CalendarDays
+                  size={15}
+                  className="pointer-events-none absolute left-2.5 z-10 text-slate-400"
+                />
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="h-10 cursor-pointer rounded-lg border border-slate-300 bg-white pl-8 pr-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition hover:bg-slate-50 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
+                />
+              </div>
               {hasFilter && (
                 <button
                   onClick={() => {

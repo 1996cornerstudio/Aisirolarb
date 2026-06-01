@@ -27,6 +27,9 @@ create table if not exists public.profiles (
 alter table public.profiles
   add column if not exists language text not null default 'th';
 
+alter table public.profiles
+  add column if not exists username text;
+
 do $$
 begin
   if not exists (
@@ -37,8 +40,17 @@ begin
   end if;
 end$$;
 
+-- Backfill a username for any legacy account from its email local-part.
+update public.profiles p
+   set username = lower(split_part(u.email, '@', 1))
+  from auth.users u
+ where u.id = p.id
+   and (p.username is null or p.username = '');
+
 create index if not exists profiles_role_idx   on public.profiles (role);
 create index if not exists profiles_branch_idx on public.profiles (branch);
+create unique index if not exists profiles_username_key
+  on public.profiles (username) where username is not null;
 
 -- keep updated_at fresh (reuses set_updated_at() from schema.sql)
 drop trigger if exists trg_profiles_updated_at on public.profiles;
@@ -84,13 +96,17 @@ begin
     resolved_lang := new.raw_user_meta_data ->> 'lang';
   end if;
 
-  insert into public.profiles (id, name, branch, role, language)
+  insert into public.profiles (id, name, branch, role, language, username)
   values (
     new.id,
     coalesce(nullif(new.raw_user_meta_data ->> 'name', ''), split_part(new.email, '@', 1)),
     nullif(new.raw_user_meta_data ->> 'branch', ''),
     resolved_role,
-    resolved_lang
+    resolved_lang,
+    coalesce(
+      nullif(lower(new.raw_user_meta_data ->> 'username'), ''),
+      lower(split_part(new.email, '@', 1))
+    )
   )
   on conflict (id) do nothing;
 

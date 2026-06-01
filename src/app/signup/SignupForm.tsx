@@ -4,11 +4,11 @@ import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   AlertCircle,
+  AtSign,
   Building2,
   CheckCircle2,
   KeyRound,
   Lock,
-  Mail,
   User,
   UserPlus,
 } from "lucide-react";
@@ -55,12 +55,15 @@ export default function SignupForm({ branches }: { branches?: string[] }) {
           <form action={formAction} className="space-y-4">
             {(state.error ||
               state.code === "signupRequired" ||
-              state.code === "passwordShort") && (
+              state.code === "passwordShort" ||
+              state.code === "usernameInvalid") && (
               <div className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm text-rose-700">
                 <AlertCircle size={16} className="mt-0.5 shrink-0" />
                 <span>
                   {state.code === "signupRequired"
                     ? t.signup.errorRequired
+                    : state.code === "usernameInvalid"
+                    ? t.signup.errorUsernameInvalid
                     : state.code === "passwordShort"
                     ? t.signup.errorPasswordShort
                     : state.error}
@@ -113,21 +116,25 @@ export default function SignupForm({ branches }: { branches?: string[] }) {
             </div>
 
             <div>
-              <label htmlFor="email" className={labelClass}>
-                {t.common.email}
+              <label htmlFor="username" className={labelClass}>
+                {t.common.username}
               </label>
               <div className={fieldWrap}>
-                <Mail size={16} className="shrink-0 text-slate-400" />
+                <AtSign size={16} className="shrink-0 text-slate-400" />
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
+                  id="username"
+                  name="username"
+                  type="text"
+                  autoComplete="username"
+                  autoCapitalize="none"
                   required
-                  placeholder={t.common.emailPlaceholder}
+                  placeholder={t.common.usernamePlaceholder}
                   className={inputClass}
                 />
               </div>
+              <p className="mt-1.5 text-xs text-slate-400">
+                {t.signup.usernameHint}
+              </p>
             </div>
 
             <div>

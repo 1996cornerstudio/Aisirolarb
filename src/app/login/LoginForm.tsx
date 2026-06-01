@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
-import { AlertCircle, Clock, LogIn, Lock, Mail } from "lucide-react";
+import { AlertCircle, Clock, LogIn, Lock, User } from "lucide-react";
 import { signInAction, type AuthResult } from "../auth/actions";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -51,18 +51,19 @@ export default function LoginForm() {
             )}
 
             <div>
-              <label htmlFor="email" className={labelClass}>
-                {t.common.email}
+              <label htmlFor="username" className={labelClass}>
+                {t.common.username}
               </label>
               <div className={fieldWrap}>
-                <Mail size={16} className="shrink-0 text-slate-400" />
+                <User size={16} className="shrink-0 text-slate-400" />
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
+                  id="username"
+                  name="username"
+                  type="text"
+                  autoComplete="username"
+                  autoCapitalize="none"
                   required
-                  placeholder={t.common.emailPlaceholder}
+                  placeholder={t.common.usernamePlaceholder}
                   className={inputClass}
                 />
               </div>

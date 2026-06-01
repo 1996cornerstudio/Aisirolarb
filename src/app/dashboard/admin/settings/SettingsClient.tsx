@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import {
@@ -25,13 +25,7 @@ import type {
   Branch,
   Profile,
 } from "@/lib/types";
-import {
-  calcWorkBreakdown,
-  resolveSettings,
-  settingsFromRow,
-  roundHours,
-  formatDateTime,
-} from "@/lib/attendance";
+import { settingsFromRow } from "@/lib/attendance";
 import { toCsv, downloadCsv } from "@/lib/csv";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -144,7 +138,7 @@ export default function SettingsClient({
           />
         )}
         {tab === "export" && (
-          <ExportTab records={records} employees={employees} settings={settings} />
+          <ExportTab records={records} employees={employees} />
         )}
         {tab === "defaults" && <DefaultsTab settings={settings} />}
         {tab === "branches" && <BranchesTab branches={branches} />}
@@ -621,45 +615,38 @@ function ResetPasswordModal({
 function ExportTab({
   records,
   employees,
-  settings,
 }: {
   records: AttendanceRecord[];
   employees: Profile[];
-  settings: AppSettings | null;
 }) {
   const { t } = useI18n();
-  const global = settingsFromRow(settings);
-  const byId = useMemo(
-    () => new Map(employees.map((e) => [e.id, e])),
-    [employees]
-  );
 
   function exportAttendance() {
+    // Matches the raw Supabase report format exactly.
     const headers = [
       "ID",
-      "Name",
-      "Branch",
-      "Time In",
-      "Time Out",
-      "Work Hours",
-      "OT Hours",
-      "Remark",
+      "BRANCH",
+      "NAME",
+      "TIME IN",
+      "PHOTO IN",
+      "TIME OUT",
+      "PHOTO OUT",
+      "REMARK",
     ];
-    const rows = records.map((r) => {
-      const eff = resolveSettings(global, r.user_id ? byId.get(r.user_id) : null);
-      const b = calcWorkBreakdown(r.time_in, r.time_out, eff);
-      return [
-        r.id,
-        r.name,
-        r.branch,
-        formatDateTime(r.time_in),
-        formatDateTime(r.time_out),
-        b.isComplete ? roundHours(b.netWorkHours).toFixed(1) : "",
-        b.isComplete ? roundHours(b.otHours).toFixed(1) : "",
-        r.remark ?? "",
-      ];
-    });
-    downloadCsv(`attendance-${stamp()}.csv`, toCsv(headers, rows));
+    const sorted = [...records].sort(
+      (a, b) => new Date(a.time_in).getTime() - new Date(b.time_in).getTime()
+    );
+    const rows = sorted.map((r) => [
+      r.id,
+      r.branch,
+      r.name,
+      rawDateTime(r.time_in),
+      r.photo_in ?? "null",
+      rawDateTime(r.time_out),
+      r.photo_out ?? "null",
+      r.remark ?? "null",
+    ]);
+    downloadCsv(`attendance-report-${stamp()}.csv`, toCsv(headers, rows));
   }
 
   function exportEmployees() {
@@ -699,6 +686,12 @@ function ExportTab({
 
 function stamp(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+/** Raw DB-style timestamp "YYYY-MM-DD HH:MM:SS" (no timezone conversion). */
+function rawDateTime(iso: string | null): string {
+  if (!iso) return "null";
+  return iso.slice(0, 19).replace("T", " ");
 }
 
 /* ---------------------------- defaults tab ----------------------------- */

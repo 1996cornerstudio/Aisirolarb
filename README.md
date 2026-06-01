@@ -23,10 +23,11 @@ Example: in `09:45:01`, out `21:10:00` → gross `11.42h` → net `10.42h` → *
 
 ## 1. Database setup
 
-Run these two scripts in order in your Supabase project → **SQL Editor** → **New query**:
+Run these scripts in order in your Supabase project → **SQL Editor** → **New query**:
 
 1. [`supabase/schema.sql`](./supabase/schema.sql) — base `attendance` table, indexes, `updated_at` trigger, and the public `attendance-photos` storage bucket.
 2. [`supabase/auth.sql`](./supabase/auth.sql) — `profiles` table, the signup trigger that auto-creates a profile and resolves the role from the **secret admin code**, the `user_id` column on `attendance`, and role-aware RLS policies.
+3. [`supabase/settings.sql`](./supabase/settings.sql) — `app_settings` (global OT / shift defaults), the `branches` table, per-employee OT override columns on `profiles`, and their RLS policies. Required for the **Admin → Settings** page.
 
 ### Auth configuration
 
@@ -40,9 +41,15 @@ Run these two scripts in order in your Supabase project → **SQL Editor** → *
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-public-key
+
+# Server-only — required for admins to CREATE / DELETE / RESET users in Settings.
+# Get it from Supabase → Settings → API → service_role secret.
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-secret
 ```
 
-> ⚠️ Never put the **service_role** key in `NEXT_PUBLIC_*` or in client code.
+> ⚠️ Never put the **service_role** key in `NEXT_PUBLIC_*` or in client code. It is
+> only read server-side in `src/lib/supabase/admin.ts`. Add the same variable to
+> your Vercel project's **Environment Variables** before deploying.
 
 ## 3. Run locally
 
@@ -60,7 +67,8 @@ attendance-app/
 ├─ middleware.ts              # auth + role-based route protection
 ├─ supabase/
 │  ├─ schema.sql              # base attendance table + storage bucket
-│  └─ auth.sql                # profiles, signup trigger, role RLS
+│  ├─ auth.sql                # profiles, signup trigger, role RLS
+│  └─ settings.sql            # app_settings, branches, per-employee OT overrides
 ├─ src/
 │  ├─ app/
 │  │  ├─ layout.tsx

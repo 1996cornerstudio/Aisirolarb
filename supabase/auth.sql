@@ -17,9 +17,25 @@ create table if not exists public.profiles (
   branch      text,
   role        text        not null default 'employee'
                 check (role in ('employee', 'admin')),
+  language    text        not null default 'th'
+                check (language in ('en', 'th', 'my')),
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
+
+-- For existing databases created before V2 (idempotent):
+alter table public.profiles
+  add column if not exists language text not null default 'th';
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'profiles_language_check'
+  ) then
+    alter table public.profiles
+      add constraint profiles_language_check check (language in ('en', 'th', 'my'));
+  end if;
+end$$;
 
 create index if not exists profiles_role_idx   on public.profiles (role);
 create index if not exists profiles_branch_idx on public.profiles (branch);
@@ -57,17 +73,24 @@ declare
   -- 🔐 Change this secret to whatever you like.
   admin_secret constant text := 'ADMIN123';
   resolved_role text := 'employee';
+  resolved_lang text := 'th';
 begin
   if coalesce(new.raw_user_meta_data ->> 'admin_code', '') = admin_secret then
     resolved_role := 'admin';
   end if;
 
-  insert into public.profiles (id, name, branch, role)
+  -- Inherit the UI language the user was browsing in at signup.
+  if (new.raw_user_meta_data ->> 'lang') in ('en', 'th', 'my') then
+    resolved_lang := new.raw_user_meta_data ->> 'lang';
+  end if;
+
+  insert into public.profiles (id, name, branch, role, language)
   values (
     new.id,
     coalesce(nullif(new.raw_user_meta_data ->> 'name', ''), split_part(new.email, '@', 1)),
     nullif(new.raw_user_meta_data ->> 'branch', ''),
-    resolved_role
+    resolved_role,
+    resolved_lang
   )
   on conflict (id) do nothing;
 

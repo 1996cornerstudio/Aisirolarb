@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import type { AttendanceRecord } from "@/lib/types";
+import type { AppSettings, AttendanceRecord } from "@/lib/types";
+import { resolveSettings, settingsFromRow } from "@/lib/attendance";
 import EmployeeDashboard from "./EmployeeDashboard";
 
 export const metadata = {
@@ -11,16 +12,25 @@ export default async function EmployeeDashboardPage() {
   const profile = await requireRole("employee");
 
   const supabase = createClient();
-  const { data } = await supabase
-    .from("attendance")
-    .select("*")
-    .eq("user_id", profile.id)
-    .order("time_in", { ascending: false });
+  const [recordsRes, settingsRes] = await Promise.all([
+    supabase
+      .from("attendance")
+      .select("*")
+      .eq("user_id", profile.id)
+      .order("time_in", { ascending: false }),
+    supabase.from("app_settings").select("*").eq("id", 1).maybeSingle(),
+  ]);
+
+  const settings = resolveSettings(
+    settingsFromRow((settingsRes.data as AppSettings | null) ?? null),
+    profile
+  );
 
   return (
     <EmployeeDashboard
       profile={profile}
-      initialRecords={(data as AttendanceRecord[]) ?? []}
+      initialRecords={(recordsRes.data as AttendanceRecord[]) ?? []}
+      settings={settings}
     />
   );
 }

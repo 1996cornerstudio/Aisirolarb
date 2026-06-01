@@ -5,8 +5,32 @@ export interface Profile {
   name: string;
   branch: string | null;
   role: Role;
+  language: "en" | "th" | "my";
+  /** Per-employee overrides. `null` means "use the global default". */
+  standard_hours: number | null;
+  break_hours: number | null;
+  shift_start: string | null; // "HH:MM" / "HH:MM:SS"
+  shift_end: string | null;
+  late_grace_minutes: number | null;
   created_at: string;
   updated_at: string;
+}
+
+/** Global OT / shift defaults (single row, id = 1). */
+export interface AppSettings {
+  id: number;
+  standard_hours: number;
+  break_hours: number;
+  shift_start: string; // "HH:MM:SS"
+  shift_end: string;
+  late_grace_minutes: number;
+  updated_at: string;
+}
+
+export interface Branch {
+  id: string;
+  name: string;
+  created_at: string;
 }
 
 export interface AttendanceRecord {

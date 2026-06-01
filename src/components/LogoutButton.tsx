@@ -1,13 +1,17 @@
+"use client";
+
 import { LogOut } from "lucide-react";
 import { signOutAction } from "@/app/auth/actions";
+import { useI18n } from "@/lib/i18n/I18nProvider";
 
 export default function LogoutButton({
   className = "",
-  label = "Sign out",
+  label,
 }: {
   className?: string;
   label?: string;
 }) {
+  const { t } = useI18n();
   return (
     <form action={signOutAction}>
       <button
@@ -18,7 +22,7 @@ export default function LogoutButton({
         }
       >
         <LogOut size={16} />
-        {label}
+        {label ?? t.common.signOut}
       </button>
     </form>
   );

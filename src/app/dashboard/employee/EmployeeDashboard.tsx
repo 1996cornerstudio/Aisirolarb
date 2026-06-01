@@ -13,18 +13,27 @@ import {
 } from "lucide-react";
 import { supabase, ATTENDANCE_BUCKET } from "@/lib/supabaseClient";
 import type { AttendanceRecord, Profile } from "@/lib/types";
-import { calcWorkBreakdown, formatHours, roundHours } from "@/lib/attendance";
+import { calcWorkBreakdown, roundHours, type OtSettings } from "@/lib/attendance";
 import CameraCapture from "@/components/CameraCapture";
+import ChangePasswordButton from "@/components/ChangePasswordButton";
 import { signOutAction } from "@/app/auth/actions";
+import { useI18n } from "@/lib/i18n/I18nProvider";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 interface Props {
   profile: Profile;
   initialRecords: AttendanceRecord[];
+  settings: OtSettings;
 }
 
 type Tab = "clock" | "history";
 
-export default function EmployeeDashboard({ profile, initialRecords }: Props) {
+export default function EmployeeDashboard({
+  profile,
+  initialRecords,
+  settings,
+}: Props) {
+  const { t, intlLocale } = useI18n();
   const [records, setRecords] = useState<AttendanceRecord[]>(initialRecords);
   const [tab, setTab] = useState<Tab>("clock");
   const [now, setNow] = useState<Date | null>(null);
@@ -102,7 +111,7 @@ export default function EmployeeDashboard({ profile, initialRecords }: Props) {
       setCameraOpen(false);
       await refresh();
     } catch (err: unknown) {
-      setError(errMsg(err));
+      setError(errMsg(err, t.employee.error));
       setCameraOpen(false);
     } finally {
       setSubmitting(false);
@@ -117,10 +126,11 @@ export default function EmployeeDashboard({ profile, initialRecords }: Props) {
           <div>
             <p className="text-sm font-medium text-brand-100">
               {now
-                ? now.toLocaleDateString("en-GB", {
+                ? now.toLocaleDateString(intlLocale, {
                     weekday: "long",
                     day: "numeric",
                     month: "long",
+                    numberingSystem: "latn",
                   })
                 : "—"}
             </p>
@@ -135,27 +145,31 @@ export default function EmployeeDashboard({ profile, initialRecords }: Props) {
                 : "--:--:--"}
             </p>
           </div>
-          <form action={signOutAction}>
-            <button
-              type="submit"
-              aria-label="Sign out"
-              className="rounded-full bg-white/10 p-2 text-white transition hover:bg-white/20"
-            >
-              <LogOut size={18} />
-            </button>
-          </form>
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher tone="dark" />
+            <form action={signOutAction}>
+              <button
+                type="submit"
+                aria-label={t.common.signOut}
+                className="rounded-full bg-white/10 p-2 text-white transition hover:bg-white/20"
+              >
+                <LogOut size={18} />
+              </button>
+            </form>
+          </div>
         </div>
 
         <div className="mt-5 flex items-center gap-3 rounded-2xl bg-white/10 px-4 py-3 backdrop-blur">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-base font-bold">
             {initials(profile.name)}
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">{profile.name}</p>
             <p className="truncate text-xs text-brand-100">
-              {profile.branch ?? "No branch"}
+              {profile.branch ?? t.common.noBranch}
             </p>
           </div>
+          <ChangePasswordButton className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-white/25" />
         </div>
       </header>
 
@@ -175,9 +189,10 @@ export default function EmployeeDashboard({ profile, initialRecords }: Props) {
               setCameraOpen(true);
             }}
             todayRecords={records}
+            settings={settings}
           />
         ) : (
-          <HistoryView records={records} />
+          <HistoryView records={records} settings={settings} />
         )}
       </main>
 
@@ -188,24 +203,20 @@ export default function EmployeeDashboard({ profile, initialRecords }: Props) {
             active={tab === "clock"}
             onClick={() => setTab("clock")}
             icon={<Clock3 size={20} />}
-            label="บันทึกเวลา"
+            label={t.employee.tabClock}
           />
           <TabButton
             active={tab === "history"}
             onClick={() => setTab("history")}
             icon={<History size={20} />}
-            label="ประวัติของฉัน"
+            label={t.employee.tabHistory}
           />
         </div>
       </nav>
 
       {cameraOpen && (
         <CameraCapture
-          title={
-            mode === "in"
-              ? "บันทึกเวลาเข้างาน (Check-In)"
-              : "บันทึกเวลาออกงาน (Check-Out)"
-          }
+          title={mode === "in" ? t.camera.titleIn : t.camera.titleOut}
           accent={mode === "in" ? "green" : "orange"}
           submitting={submitting}
           onCancel={() => setCameraOpen(false)}
@@ -217,6 +228,7 @@ export default function EmployeeDashboard({ profile, initialRecords }: Props) {
         <SuccessOverlay
           mode={success.mode}
           record={success.record}
+          settings={settings}
           onClose={() => setSuccess(null)}
         />
       )}
@@ -229,12 +241,15 @@ function ClockView({
   activeRecord,
   onAction,
   todayRecords,
+  settings,
 }: {
   mode: "in" | "out";
   activeRecord: AttendanceRecord | null;
   onAction: () => void;
   todayRecords: AttendanceRecord[];
+  settings: OtSettings;
 }) {
+  const { t } = useI18n();
   const todays = useMemo(() => {
     const today = new Date().toDateString();
     return todayRecords.filter(
@@ -246,9 +261,7 @@ function ClockView({
     <div className="-mt-4">
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <p className="text-center text-sm text-slate-500">
-          {mode === "in"
-            ? "คุณยังไม่ได้บันทึกเวลาเข้างาน"
-            : "คุณกำลังทำงานอยู่"}
+          {mode === "in" ? t.employee.notCheckedIn : t.employee.working}
         </p>
 
         <button
@@ -263,19 +276,17 @@ function ClockView({
             {mode === "in" ? <LogIn size={40} /> : <LogOut size={40} />}
           </span>
           <span className="text-lg font-bold">
-            {mode === "in"
-              ? "บันทึกเวลาเข้างาน"
-              : "บันทึกเวลาออกงาน"}
+            {mode === "in" ? t.employee.checkInBtn : t.employee.checkOutBtn}
           </span>
           <span className="flex items-center gap-1.5 text-sm font-medium text-white/80">
             <Camera size={14} />
-            {mode === "in" ? "Check-In" : "Check-Out"}
+            {mode === "in" ? t.employee.checkInShort : t.employee.checkOutShort}
           </span>
         </button>
 
         {activeRecord && (
           <p className="mt-4 text-center text-sm text-slate-500">
-            เข้างานเมื่อ{" "}
+            {t.employee.checkedInAtLabel}{" "}
             <span className="font-semibold text-slate-700">
               {new Date(activeRecord.time_in).toLocaleTimeString("en-GB", {
                 hour: "2-digit",
@@ -289,11 +300,11 @@ function ClockView({
       {todays.length > 0 && (
         <div className="mt-5">
           <h2 className="mb-2 px-1 text-sm font-semibold text-slate-600">
-            สรุปวันนี้
+            {t.employee.todaySummary}
           </h2>
           <div className="space-y-3">
             {todays.map((r) => (
-              <DayCard key={r.id} record={r} />
+              <DayCard key={r.id} record={r} settings={settings} />
             ))}
           </div>
         </div>
@@ -302,49 +313,56 @@ function ClockView({
   );
 }
 
-function HistoryView({ records }: { records: AttendanceRecord[] }) {
+function HistoryView({
+  records,
+  settings,
+}: {
+  records: AttendanceRecord[];
+  settings: OtSettings;
+}) {
+  const { t } = useI18n();
   const totals = useMemo(() => {
     let work = 0;
     let ot = 0;
     for (const r of records) {
-      const b = calcWorkBreakdown(r.time_in, r.time_out);
+      const b = calcWorkBreakdown(r.time_in, r.time_out, settings);
       work += b.netWorkHours;
       ot += b.otHours;
     }
     return { work, ot };
-  }, [records]);
+  }, [records, settings]);
 
   return (
     <div className="pt-5">
       <div className="grid grid-cols-2 gap-3">
         <StatTile
           icon={<TimerReset size={18} />}
-          label="ชั่วโมงทำงานรวม"
-          value={formatHours(totals.work)}
+          label={t.employee.totalWorkHours}
+          value={`${roundHours(totals.work).toFixed(1)} ${t.common.hoursShort}`}
           accent="text-brand-600"
         />
         <StatTile
           icon={<Zap size={18} />}
-          label="โอทีสะสม"
-          value={formatHours(totals.ot)}
+          label={t.employee.totalOt}
+          value={`${roundHours(totals.ot).toFixed(1)} ${t.common.hoursShort}`}
           accent="text-amber-600"
         />
       </div>
 
       <h2 className="mb-2 mt-6 px-1 text-sm font-semibold text-slate-600">
-        ประวัติการลงเวลา
+        {t.employee.historyTitle}
       </h2>
 
       {records.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-12 text-center text-sm text-slate-400">
-          ยังไม่มีประวัติการลงเวลา
+          {t.employee.noHistory}
         </div>
       ) : (
         <ol className="relative space-y-3 border-l-2 border-slate-100 pl-4">
           {records.map((r) => (
             <li key={r.id} className="relative">
               <span className="absolute -left-[1.42rem] top-3 h-3 w-3 rounded-full border-2 border-white bg-brand-500" />
-              <DayCard record={r} showDate />
+              <DayCard record={r} settings={settings} showDate />
             </li>
           ))}
         </ol>
@@ -355,47 +373,52 @@ function HistoryView({ records }: { records: AttendanceRecord[] }) {
 
 function DayCard({
   record,
+  settings,
   showDate = false,
 }: {
   record: AttendanceRecord;
+  settings: OtSettings;
   showDate?: boolean;
 }) {
-  const b = calcWorkBreakdown(record.time_in, record.time_out);
+  const { t, intlLocale } = useI18n();
+  const b = calcWorkBreakdown(record.time_in, record.time_out, settings);
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
           <CalendarDays size={15} className="text-slate-400" />
           {showDate
-            ? new Date(record.time_in).toLocaleDateString("en-GB", {
+            ? new Date(record.time_in).toLocaleDateString(intlLocale, {
                 day: "2-digit",
                 month: "short",
                 year: "numeric",
+                numberingSystem: "latn",
               })
-            : "วันนี้"}
+            : t.employee.today}
         </div>
         {record.time_out ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> เสร็จสิ้น
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{" "}
+            {t.employee.done}
           </span>
         ) : (
           <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />{" "}
-            กำลังทำงาน
+            {t.employee.inProgress}
           </span>
         )}
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
         <TimePill
-          label="เข้างาน"
+          label={t.employee.timeIn}
           value={new Date(record.time_in).toLocaleTimeString("en-GB", {
             hour: "2-digit",
             minute: "2-digit",
           })}
         />
         <TimePill
-          label="ออกงาน"
+          label={t.employee.timeOut}
           value={
             record.time_out
               ? new Date(record.time_out).toLocaleTimeString("en-GB", {
@@ -410,17 +433,18 @@ function DayCard({
       {b.isComplete && (
         <div className="mt-3 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-sm">
           <span className="text-slate-500">
-            ทำงาน{" "}
+            {t.employee.worked}{" "}
             <span className="font-semibold text-slate-700">
-              {roundHours(b.netWorkHours).toFixed(1)} ชม.
+              {roundHours(b.netWorkHours).toFixed(1)} {t.common.hoursShort}
             </span>
           </span>
           {b.otHours > 0 ? (
             <span className="font-semibold text-amber-600">
-              OT {roundHours(b.otHours).toFixed(1)} ชม.
+              {t.employee.ot} {roundHours(b.otHours).toFixed(1)}{" "}
+              {t.common.hoursShort}
             </span>
           ) : (
-            <span className="text-slate-400">ไม่มี OT</span>
+            <span className="text-slate-400">{t.employee.noOt}</span>
           )}
         </div>
       )}
@@ -488,17 +512,20 @@ function TabButton({
 function SuccessOverlay({
   mode,
   record,
+  settings,
   onClose,
 }: {
   mode: "in" | "out";
   record: AttendanceRecord;
+  settings: OtSettings;
   onClose: () => void;
 }) {
-  const b = calcWorkBreakdown(record.time_in, record.time_out);
+  const { t } = useI18n();
+  const b = calcWorkBreakdown(record.time_in, record.time_out, settings);
 
   useEffect(() => {
-    const t = setTimeout(onClose, 3200);
-    return () => clearTimeout(t);
+    const timer = setTimeout(onClose, 3200);
+    return () => clearTimeout(timer);
   }, [onClose]);
 
   return (
@@ -534,14 +561,16 @@ function SuccessOverlay({
           </svg>
         </div>
 
-        <h3 className="mt-4 text-xl font-bold text-slate-900">สำเร็จ!</h3>
+        <h3 className="mt-4 text-xl font-bold text-slate-900">
+          {t.employee.success}
+        </h3>
         <p className="mt-1 text-sm text-slate-500">
-          {mode === "in" ? "บันทึกเวลาเข้างานแล้ว" : "บันทึกเวลาออกงานแล้ว"}
+          {mode === "in" ? t.employee.successIn : t.employee.successOut}
         </p>
 
         <div className="mt-5 space-y-2 rounded-2xl bg-slate-50 p-4 text-left text-sm">
           <Row
-            label="เข้างาน"
+            label={t.employee.timeIn}
             value={new Date(record.time_in).toLocaleTimeString("en-GB", {
               hour: "2-digit",
               minute: "2-digit",
@@ -549,7 +578,7 @@ function SuccessOverlay({
           />
           {record.time_out && (
             <Row
-              label="ออกงาน"
+              label={t.employee.timeOut}
               value={new Date(record.time_out).toLocaleTimeString("en-GB", {
                 hour: "2-digit",
                 minute: "2-digit",
@@ -558,10 +587,13 @@ function SuccessOverlay({
           )}
           {b.isComplete && (
             <>
-              <Row label="ทำงาน" value={`${roundHours(b.netWorkHours).toFixed(1)} ชม.`} />
               <Row
-                label="OT"
-                value={`${roundHours(b.otHours).toFixed(1)} ชม.`}
+                label={t.employee.worked}
+                value={`${roundHours(b.netWorkHours).toFixed(1)} ${t.common.hoursShort}`}
+              />
+              <Row
+                label={t.employee.ot}
+                value={`${roundHours(b.otHours).toFixed(1)} ${t.common.hoursShort}`}
                 highlight={b.otHours > 0}
               />
             </>
@@ -603,9 +635,9 @@ function initials(name: string): string {
     .join("");
 }
 
-function errMsg(err: unknown): string {
+function errMsg(err: unknown, fallback: string): string {
   if (err && typeof err === "object" && "message" in err) {
     return String((err as { message: unknown }).message);
   }
-  return "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง";
+  return fallback;
 }

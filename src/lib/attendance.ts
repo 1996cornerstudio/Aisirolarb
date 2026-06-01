@@ -1,19 +1,76 @@
-import type { AttendanceRecord, AttendanceFilters } from "./types";
+import type {
+  AttendanceRecord,
+  AttendanceFilters,
+  AppSettings,
+  Profile,
+} from "./types";
 
 // --- Business rules -------------------------------------------------------
-// A standard day is 9 net working hours. The clocked span also includes a
-// 1-hour unpaid break that does NOT count as work. Anything worked beyond the
-// 9-hour standard (after removing the break) is Overtime (OT).
+// A standard day is N net working hours (default 9). The clocked span also
+// includes an unpaid break (default 1h) that does NOT count as work. Anything
+// worked beyond the standard (after removing the break) is Overtime (OT).
 //
-// Example from the reference data:
-//   time_in  = 09:45:01
-//   time_out = 21:10:00
-//   gross span        = ~11.42 h
-//   net work (-break) = ~10.42 h
-//   OT (net - 9)      = ~1.42 h  -> ~1.4 h
+// These values are now configurable in the Admin Settings page: there is a
+// global default (app_settings) plus optional per-employee overrides.
 export const BREAK_HOURS = 1;
 export const STANDARD_HOURS = 9;
 const MS_PER_HOUR = 1000 * 60 * 60;
+
+/** The subset of settings that affects OT / shift calculations. */
+export interface OtSettings {
+  standardHours: number;
+  breakHours: number;
+  shiftStart: string; // "HH:MM" / "HH:MM:SS"
+  shiftEnd: string;
+  lateGraceMinutes: number;
+}
+
+export const DEFAULT_OT_SETTINGS: OtSettings = {
+  standardHours: STANDARD_HOURS,
+  breakHours: BREAK_HOURS,
+  shiftStart: "09:00",
+  shiftEnd: "18:00",
+  lateGraceMinutes: 15,
+};
+
+/** Map a DB `app_settings` row to the runtime `OtSettings` shape. */
+export function settingsFromRow(row: AppSettings | null): OtSettings {
+  if (!row) return DEFAULT_OT_SETTINGS;
+  return {
+    standardHours: Number(row.standard_hours),
+    breakHours: Number(row.break_hours),
+    shiftStart: row.shift_start,
+    shiftEnd: row.shift_end,
+    lateGraceMinutes: row.late_grace_minutes,
+  };
+}
+
+/**
+ * Resolve the effective settings for one employee: any non-null override on
+ * the profile wins, otherwise we fall back to the global default.
+ */
+export function resolveSettings(
+  global: OtSettings,
+  profile?: Partial<Profile> | null
+): OtSettings {
+  if (!profile) return global;
+  return {
+    standardHours:
+      profile.standard_hours != null
+        ? Number(profile.standard_hours)
+        : global.standardHours,
+    breakHours:
+      profile.break_hours != null
+        ? Number(profile.break_hours)
+        : global.breakHours,
+    shiftStart: profile.shift_start ?? global.shiftStart,
+    shiftEnd: profile.shift_end ?? global.shiftEnd,
+    lateGraceMinutes:
+      profile.late_grace_minutes != null
+        ? profile.late_grace_minutes
+        : global.lateGraceMinutes,
+  };
+}
 
 export interface WorkBreakdown {
   /** Raw clocked span (time_out - time_in) in hours. */
@@ -31,7 +88,8 @@ export interface WorkBreakdown {
 /** Calculate the work/OT breakdown for a single attendance record. */
 export function calcWorkBreakdown(
   timeIn: string | null,
-  timeOut: string | null
+  timeOut: string | null,
+  settings: OtSettings = DEFAULT_OT_SETTINGS
 ): WorkBreakdown {
   if (!timeIn || !timeOut) {
     return {
@@ -47,8 +105,8 @@ export function calcWorkBreakdown(
   const end = new Date(timeOut).getTime();
   const grossHours = Math.max(0, (end - start) / MS_PER_HOUR);
 
-  const netWorkHours = Math.max(0, grossHours - BREAK_HOURS);
-  const otHours = Math.max(0, netWorkHours - STANDARD_HOURS);
+  const netWorkHours = Math.max(0, grossHours - settings.breakHours);
+  const otHours = Math.max(0, netWorkHours - settings.standardHours);
   const regularHours = netWorkHours - otHours;
 
   return {
@@ -58,6 +116,23 @@ export function calcWorkBreakdown(
     otHours,
     isComplete: true,
   };
+}
+
+/**
+ * Was this check-in late versus the configured shift start (+ grace)?
+ * Returns `false` when there is no time_in.
+ */
+export function isLateCheckIn(
+  timeIn: string | null,
+  settings: OtSettings = DEFAULT_OT_SETTINGS
+): boolean {
+  if (!timeIn) return false;
+  const [h, m] = settings.shiftStart.split(":").map(Number);
+  const d = new Date(timeIn);
+  const shiftStart = new Date(d);
+  shiftStart.setHours(h, m, 0, 0);
+  const threshold = shiftStart.getTime() + settings.lateGraceMinutes * 60_000;
+  return d.getTime() > threshold;
 }
 
 /** Round to one decimal place for display (e.g. 1.4163 -> 1.4). */

@@ -1,39 +1,67 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Building2,
   Pencil,
   Search,
+  Settings as SettingsIcon,
   ShieldCheck,
   UserCheck,
   X,
   Zap,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
-import type { AttendanceRecord, Profile } from "@/lib/types";
+import type { AppSettings, AttendanceRecord, Profile } from "@/lib/types";
 import {
   calcWorkBreakdown,
   formatDateTime,
+  resolveSettings,
+  settingsFromRow,
   roundHours,
   uniqueSorted,
+  type OtSettings,
 } from "@/lib/attendance";
 import LogoutButton from "@/components/LogoutButton";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useI18n } from "@/lib/i18n/I18nProvider";
 
 interface Props {
   profile: Profile;
   initialRecords: AttendanceRecord[];
+  settings: AppSettings | null;
+  employees: Profile[];
 }
 
 const HIGH_OT_HOURS = 3;
 
-export default function AdminDashboard({ profile, initialRecords }: Props) {
+export default function AdminDashboard({
+  profile,
+  initialRecords,
+  settings,
+  employees,
+}: Props) {
+  const { t } = useI18n();
   const [records, setRecords] = useState<AttendanceRecord[]>(initialRecords);
   const [search, setSearch] = useState("");
   const [branch, setBranch] = useState("");
   const [date, setDate] = useState("");
   const [editing, setEditing] = useState<AttendanceRecord | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+
+  const globalSettings = useMemo(() => settingsFromRow(settings), [settings]);
+  const employeeById = useMemo(
+    () => new Map(employees.map((e) => [e.id, e])),
+    [employees]
+  );
+  /** Effective OT settings for a record's owner (override → global). */
+  function settingsFor(rec: AttendanceRecord): OtSettings {
+    return resolveSettings(
+      globalSettings,
+      rec.user_id ? employeeById.get(rec.user_id) : null
+    );
+  }
 
   const branches = useMemo(
     () => uniqueSorted(records.map((r) => r.branch)),
@@ -55,18 +83,19 @@ export default function AdminDashboard({ profile, initialRecords }: Props) {
     const activeNow = records.filter((r) => !r.time_out);
     const activeBranches = new Set(activeNow.map((r) => r.branch));
     let totalOt = 0;
-    const employees = new Set<string>();
+    const names = new Set<string>();
     for (const r of records) {
-      employees.add(r.name);
-      totalOt += calcWorkBreakdown(r.time_in, r.time_out).otHours;
+      names.add(r.name);
+      totalOt += calcWorkBreakdown(r.time_in, r.time_out, settingsFor(r)).otHours;
     }
     return {
       currentlyIn: activeNow.length,
       activeBranches: activeBranches.size,
       totalOt,
-      totalEmployees: employees.size,
+      totalEmployees: names.size,
     };
-  }, [records]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [records, globalSettings, employeeById]);
 
   async function refresh() {
     const { data } = await supabase
@@ -105,17 +134,23 @@ export default function AdminDashboard({ profile, initialRecords }: Props) {
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight text-slate-900">
-                Admin Dashboard
+                {t.admin.title}
               </h1>
-              <p className="text-sm text-slate-500">
-                ภาพรวมการเข้างานและโอทีของพนักงานทุกสาขา
-              </p>
+              <p className="text-sm text-slate-500">{t.admin.subtitle}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <span className="hidden text-sm text-slate-500 sm:inline">
               {profile.name}
             </span>
+            <Link
+              href="/dashboard/admin/settings"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
+            >
+              <SettingsIcon size={16} />
+              {t.admin.settingsBtn}
+            </Link>
+            <LanguageSwitcher />
             <LogoutButton />
           </div>
         </header>
@@ -123,32 +158,32 @@ export default function AdminDashboard({ profile, initialRecords }: Props) {
         {/* Summary cards */}
         <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <SummaryCard
-            label="พนักงานเข้างานวันนี้"
-            hint="Currently checked in"
+            label={t.admin.cardCurrentlyIn}
+            hint={t.admin.cardCurrentlyInHint}
             value={String(stats.currentlyIn)}
             accent="from-emerald-500 to-emerald-600"
             icon={<UserCheck size={22} />}
           />
           <SummaryCard
-            label="สาขาที่เปิดทำงาน"
-            hint="Active branches"
+            label={t.admin.cardActiveBranches}
+            hint={t.admin.cardActiveBranchesHint}
             value={String(stats.activeBranches)}
             accent="from-brand-500 to-brand-600"
             icon={<Building2 size={22} />}
           />
           <SummaryCard
-            label="ชั่วโมงโอทีสะสมทั้งหมด"
-            hint="Total accumulated OT"
+            label={t.admin.cardTotalOt}
+            hint={t.admin.cardTotalOtHint}
             value={`${roundHours(stats.totalOt).toLocaleString("en-US", {
               minimumFractionDigits: 1,
               maximumFractionDigits: 1,
-            })} h`}
+            })} ${t.common.hoursShort}`}
             accent="from-amber-500 to-orange-600"
             icon={<Zap size={22} />}
           />
           <SummaryCard
-            label="พนักงานทั้งหมด"
-            hint="Distinct employees"
+            label={t.admin.cardTotalEmp}
+            hint={t.admin.cardTotalEmpHint}
             value={String(stats.totalEmployees)}
             accent="from-violet-500 to-violet-600"
             icon={<UserCheck size={22} />}
@@ -159,7 +194,7 @@ export default function AdminDashboard({ profile, initialRecords }: Props) {
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-3 border-b border-slate-100 p-4 lg:flex-row lg:items-center lg:justify-between">
             <h2 className="text-sm font-semibold text-slate-700">
-              Master Attendance{" "}
+              {t.admin.masterTitle}{" "}
               <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">
                 {filtered.length}
               </span>
@@ -171,7 +206,7 @@ export default function AdminDashboard({ profile, initialRecords }: Props) {
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search employee…"
+                  placeholder={t.admin.searchPlaceholder}
                   className="w-44 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
                 />
               </div>
@@ -180,7 +215,7 @@ export default function AdminDashboard({ profile, initialRecords }: Props) {
                 onChange={(e) => setBranch(e.target.value)}
                 className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               >
-                <option value="">All branches</option>
+                <option value="">{t.admin.allBranches}</option>
                 {branches.map((b) => (
                   <option key={b} value={b}>
                     {b}
@@ -202,7 +237,7 @@ export default function AdminDashboard({ profile, initialRecords }: Props) {
                   }}
                   className="inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-sm font-medium text-slate-500 hover:text-slate-700"
                 >
-                  <X size={14} /> Clear
+                  <X size={14} /> {t.common.clear}
                 </button>
               )}
             </div>
@@ -212,27 +247,35 @@ export default function AdminDashboard({ profile, initialRecords }: Props) {
             <table className="min-w-full divide-y divide-slate-100 text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Employee</th>
-                  <th className="px-4 py-3 font-medium">Branch</th>
-                  <th className="px-4 py-3 font-medium">Time In</th>
-                  <th className="px-4 py-3 font-medium">Time Out</th>
-                  <th className="px-4 py-3 text-right font-medium">Work</th>
-                  <th className="px-4 py-3 text-right font-medium">OT</th>
-                  <th className="px-4 py-3 text-center font-medium">Photos</th>
-                  <th className="px-4 py-3 font-medium">Remark</th>
-                  <th className="px-4 py-3 text-center font-medium">Edit</th>
+                  <th className="px-4 py-3 font-medium">{t.admin.colEmployee}</th>
+                  <th className="px-4 py-3 font-medium">{t.admin.colBranch}</th>
+                  <th className="px-4 py-3 font-medium">{t.admin.colTimeIn}</th>
+                  <th className="px-4 py-3 font-medium">{t.admin.colTimeOut}</th>
+                  <th className="px-4 py-3 text-right font-medium">
+                    {t.admin.colWork}
+                  </th>
+                  <th className="px-4 py-3 text-right font-medium">
+                    {t.admin.colOt}
+                  </th>
+                  <th className="px-4 py-3 text-center font-medium">
+                    {t.admin.colPhotos}
+                  </th>
+                  <th className="px-4 py-3 font-medium">{t.admin.colRemark}</th>
+                  <th className="px-4 py-3 text-center font-medium">
+                    {t.admin.colEdit}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filtered.length === 0 && (
                   <tr>
                     <td colSpan={9} className="px-4 py-12 text-center text-slate-400">
-                      No records match the current filters.
+                      {t.admin.noRecords}
                     </td>
                   </tr>
                 )}
                 {filtered.map((r) => {
-                  const b = calcWorkBreakdown(r.time_in, r.time_out);
+                  const b = calcWorkBreakdown(r.time_in, r.time_out, settingsFor(r));
                   const highOt = b.otHours >= HIGH_OT_HOURS;
                   const hasRemark = !!r.remark?.trim();
                   const rowTint = highOt
@@ -422,6 +465,7 @@ function EditModal({
     patch: { remark: string; time_in: string; time_out: string | null }
   ) => Promise<void>;
 }) {
+  const { t } = useI18n();
   const [remark, setRemark] = useState(record.remark ?? "");
   const [timeIn, setTimeIn] = useState(toLocalInput(record.time_in));
   const [timeOut, setTimeOut] = useState(toLocalInput(record.time_out));
@@ -442,7 +486,7 @@ function EditModal({
       setError(
         err && typeof err === "object" && "message" in err
           ? String((err as { message: unknown }).message)
-          : "Failed to save changes."
+          : t.admin.editError
       );
     } finally {
       setSaving(false);
@@ -459,7 +503,7 @@ function EditModal({
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="text-base font-semibold text-slate-800">
-              Edit record
+              {t.admin.editTitle}
             </h3>
             <p className="text-sm text-slate-500">
               {record.name} · {record.branch}
@@ -483,7 +527,7 @@ function EditModal({
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className={labelClass}>Time In</label>
+              <label className={labelClass}>{t.admin.editTimeIn}</label>
               <input
                 type="datetime-local"
                 value={timeIn}
@@ -492,7 +536,7 @@ function EditModal({
               />
             </div>
             <div>
-              <label className={labelClass}>Time Out</label>
+              <label className={labelClass}>{t.admin.editTimeOut}</label>
               <input
                 type="datetime-local"
                 value={timeOut}
@@ -503,12 +547,12 @@ function EditModal({
           </div>
 
           <div>
-            <label className={labelClass}>Remark</label>
+            <label className={labelClass}>{t.admin.editRemark}</label>
             <textarea
               value={remark}
               onChange={(e) => setRemark(e.target.value)}
               rows={3}
-              placeholder="Add a note…"
+              placeholder={t.admin.remarkPlaceholder}
               className={`${inputClass} resize-none`}
             />
           </div>
@@ -520,14 +564,14 @@ function EditModal({
             disabled={saving}
             className="flex-1 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
           >
-            Cancel
+            {t.common.cancel}
           </button>
           <button
             onClick={submit}
             disabled={saving}
             className="flex-[1.4] rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60"
           >
-            {saving ? "Saving…" : "Save changes"}
+            {saving ? t.admin.saving : t.admin.saveChanges}
           </button>
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, RefreshCw, Upload, X } from "lucide-react";
+import { useI18n } from "@/lib/i18n/I18nProvider";
 
 interface Props {
   title: string;
@@ -22,6 +23,7 @@ export default function CameraCapture({
   onConfirm,
   submitting = false,
 }: Props) {
+  const { t } = useI18n();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [preview, setPreview] = useState<{ url: string; file: File } | null>(
@@ -128,12 +130,10 @@ export default function CameraCapture({
             ) : cameraError ? (
               <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-slate-300">
                 <Camera size={32} className="opacity-60" />
-                <p className="text-sm">
-                  Camera unavailable. Upload a photo instead.
-                </p>
+                <p className="text-sm">{t.camera.unavailable}</p>
                 <label className="cursor-pointer rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20">
                   <span className="inline-flex items-center gap-2">
-                    <Upload size={15} /> Choose file
+                    <Upload size={15} /> {t.camera.chooseFile}
                   </span>
                   <input
                     type="file"
@@ -154,7 +154,7 @@ export default function CameraCapture({
                 />
                 {!cameraReady && (
                   <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-300">
-                    Starting camera…
+                    {t.camera.starting}
                   </div>
                 )}
               </>
@@ -169,14 +169,14 @@ export default function CameraCapture({
                   disabled={submitting}
                   className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
                 >
-                  <RefreshCw size={16} /> Retake
+                  <RefreshCw size={16} /> {t.camera.retake}
                 </button>
                 <button
                   onClick={() => onConfirm(preview.file)}
                   disabled={submitting}
                   className={`flex flex-[1.4] items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-sm transition disabled:opacity-60 ${accentBtn}`}
                 >
-                  {submitting ? "Saving…" : "Confirm"}
+                  {submitting ? t.camera.saving : t.camera.confirm}
                 </button>
               </>
             ) : (
@@ -186,7 +186,7 @@ export default function CameraCapture({
                   disabled={!cameraReady}
                   className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-sm transition disabled:opacity-60 ${accentBtn}`}
                 >
-                  <Camera size={18} /> Take photo
+                  <Camera size={18} /> {t.camera.takePhoto}
                 </button>
               )
             )}
@@ -194,7 +194,7 @@ export default function CameraCapture({
 
           {!preview && !cameraError && (
             <label className="mt-3 block cursor-pointer text-center text-xs font-medium text-slate-400 transition hover:text-slate-600">
-              or upload from device
+              {t.camera.orUpload}
               <input
                 type="file"
                 accept="image/*"
